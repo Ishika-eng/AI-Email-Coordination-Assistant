@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AI Email Assistant — Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #0f1117; --surface: #1a1d27; --card: #21253a;
+      --border: #2e3250; --accent: #6c63ff; --accent2: #00d4aa;
+      --danger: #ff4f6e; --warn: #f59e0b; --text: #e2e8f0;
+      --muted: #8892b0; --success: #10b981;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 1rem 2rem;
+             display: flex; align-items: center; gap: 1rem; position: sticky; top: 0; z-index: 100; }
+    header h1 { font-size: 1.2rem; font-weight: 600; }
+    header span.badge { background: var(--accent); color: #fff; font-size: 0.65rem; padding: 2px 8px;
+                        border-radius: 999px; font-weight: 500; letter-spacing: 0.5px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success);
+           box-shadow: 0 0 6px var(--success); animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    nav { display: flex; gap: 0.5rem; margin-left: auto; }
+    nav button { background: transparent; border: 1px solid var(--border); color: var(--muted);
+                 padding: 0.4rem 1rem; border-radius: 8px; cursor: pointer; font-size: 0.85rem;
+                 transition: all .2s; }
+    nav button.active, nav button:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+    main { padding: 2rem; max-width: 1200px; margin: 0 auto; }
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+    .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+                 padding: 1.2rem; display: flex; flex-direction: column; gap: 0.3rem; }
+    .stat-card .val { font-size: 2rem; font-weight: 700; }
+    .stat-card .lbl { font-size: 0.8rem; color: var(--muted); }
+    .stat-card.a .val { color: var(--accent); } .stat-card.b .val { color: var(--accent2); }
+    .stat-card.c .val { color: var(--warn); } .stat-card.d .val { color: var(--success); }
+    section { display: none; }
+    section.active { display: block; }
+    h2 { font-size: 1rem; font-weight: 600; margin-bottom: 1rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+    table { width: 100%; border-collapse: collapse; }
+    th { text-align: left; padding: 0.7rem 1rem; background: var(--surface); color: var(--muted);
+         font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); }
+    td { padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); font-size: 0.88rem; vertical-align: middle; }
+    tr:hover td { background: rgba(108,99,255,.05); }
+    .status-badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 0.72rem; font-weight: 500; }
+    .s-collecting { background: rgba(245,158,11,.15); color: var(--warn); }
+    .s-scheduled  { background: rgba(16,185,129,.15); color: var(--success); }
+    .s-failed,.s-no_overlap { background: rgba(255,79,110,.15); color: var(--danger); }
+    .s-other { background: rgba(136,146,176,.15); color: var(--muted); }
+    .btn-cancel { background: rgba(255,79,110,.15); color: var(--danger); border: 1px solid rgba(255,79,110,.3);
+                  padding: 4px 12px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; transition: all .2s; }
+    .btn-cancel:hover { background: var(--danger); color: #fff; }
+    a.link { color: var(--accent); text-decoration: none; } a.link:hover { text-decoration: underline; }
+    .log-list { display: flex; flex-direction: column; gap: 0.4rem; }
+    .log-entry { background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+                 padding: 0.6rem 1rem; font-size: 0.82rem; display: flex; gap: 1rem; align-items: flex-start; }
+    .log-entry .ts { color: var(--muted); white-space: nowrap; font-size: 0.75rem; padding-top: 1px; }
+    .log-entry .msg { flex: 1; }
+    .log-entry.ERROR { border-left: 3px solid var(--danger); }
+    .log-entry.WARN  { border-left: 3px solid var(--warn); }
+    .empty { text-align: center; color: var(--muted); padding: 3rem; font-size: 0.9rem; }
+    .refresh-btn { float: right; background: var(--surface); border: 1px solid var(--border);
+                   color: var(--muted); padding: 0.35rem 0.9rem; border-radius: 8px; cursor: pointer;
+                   font-size: 0.8rem; transition: all .2s; }
+    .refresh-btn:hover { color: var(--text); border-color: var(--accent); }
+  </style>
+</head>
+<body>
+<header>
+  <div class="dot"></div>
+  <h1>🤖 AI Email Assistant</h1>
+  <span class="badge">LIVE</span>
+  <nav>
+    <button class="active" onclick="show('meetings',this)">📅 Meetings</button>
+    <button onclick="show('threads',this)">🧵 Threads</button>
+    <button onclick="show('logs',this)">📋 Logs</button>
+    <button onclick="show('config',this)">⚙️ Config</button>
+  </nav>
+</header>
+<main>
+  <div class="stats">
+    <div class="stat-card a"><div class="val" id="s-meetings">–</div><div class="lbl">Meetings Scheduled</div></div>
+    <div class="stat-card b"><div class="val" id="s-threads">–</div><div class="lbl">Active Threads</div></div>
+    <div class="stat-card c"><div class="val" id="s-collecting">–</div><div class="lbl">Collecting Availability</div></div>
+    <div class="stat-card d"><div class="val" id="s-logs">–</div><div class="lbl">Actions Today</div></div>
+  </div>
+
+  <!-- Meetings -->
+  <section id="sec-meetings" class="active">
+    <h2>Scheduled Meetings <button class="refresh-btn" onclick="loadMeetings()">↻ Refresh</button></h2>
+    <table><thead><tr><th>Title</th><th>Time</th><th>Attendees</th><th>Links</th><th>Override</th></tr></thead>
+    <tbody id="meetings-body"></tbody></table>
+  </section>
+
+  <!-- Threads -->
+  <section id="sec-threads">
+    <h2>Email Threads <button class="refresh-btn" onclick="loadThreads()">↻ Refresh</button></h2>
+    <table><thead><tr><th>Subject</th><th>Participants</th><th>Status</th><th>Updated</th></tr></thead>
+    <tbody id="threads-body"></tbody></table>
+  </section>
+
+  <!-- Logs -->
+  <section id="sec-logs">
+    <h2>Activity Log <button class="refresh-btn" onclick="loadLogs()">↻ Refresh</button></h2>
+    <div class="log-list" id="log-list"></div>
+  </section>
+
+  <!-- Config -->
+  <section id="sec-config">
+    <h2>Configuration</h2>
+    <div id="config-content" style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.5rem;"></div>
+  </section>
+</main>
+
+<script>
+  function show(tab, btn) {
+    document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+    document.getElementById('sec-' + tab).classList.add('active');
+    btn.classList.add('active');
+    ({ meetings: loadMeetings, threads: loadThreads, logs: loadLogs, config: loadConfig })[tab]?.();
+  }
+
+  async function loadMeetings() {
+    const r = await fetch('/api/meetings'); const d = await r.json();
+    const tbody = document.getElementById('meetings-body');
+    document.getElementById('s-meetings').textContent = d.meetings.length;
+    if (!d.meetings.length) { tbody.innerHTML = '<tr><td colspan="5"><div class="empty">No meetings scheduled yet.</div></td></tr>'; return; }
+    tbody.innerHTML = d.meetings.map(m => `
+      <tr>
+        <td><strong>${esc(m.title)}</strong></td>
+        <td>${fmtTime(m.start_utc)} – ${fmtTime(m.end_utc)}</td>
+        <td style="font-size:.8rem;color:var(--muted)">${(m.attendees||[]).join('<br>')}</td>
+        <td>${m.meet_link ? `<a class="link" href="${m.meet_link}" target="_blank">Meet</a>` : ''}
+            ${m.cal_link  ? ` &nbsp;<a class="link" href="${m.cal_link}" target="_blank">Calendar</a>` : ''}</td>
+        <td><button class="btn-cancel" onclick="cancelMeeting(${m.id})">✕ Cancel</button></td>
+      </tr>`).join('');
+  }
+
+  async function cancelMeeting(id) {
+    if (!confirm('Cancel this meeting? (Removes from DB only — you may still need to delete from Google Calendar manually)')) return;
+    await fetch('/api/meetings/' + id, {method:'DELETE'});
+    loadMeetings();
+  }
+
+  async function loadThreads() {
+    const r = await fetch('/api/threads'); const d = await r.json();
+    const tbody = document.getElementById('threads-body');
+    const active = d.threads.filter(t => t.status === 'collecting').length;
+    document.getElementById('s-threads').textContent = d.threads.length;
+    document.getElementById('s-collecting').textContent = active;
+    if (!d.threads.length) { tbody.innerHTML = '<tr><td colspan="4"><div class="empty">No threads tracked yet.</div></td></tr>'; return; }
+    tbody.innerHTML = d.threads.map(t => `
+      <tr>
+        <td>${esc(t.subject || t.thread_id)}</td>
+        <td style="font-size:.8rem;color:var(--muted)">${(t.participants||[]).join(', ')}</td>
+        <td><span class="status-badge s-${t.status}">${t.status}</span></td>
+        <td style="color:var(--muted);font-size:.8rem">${fmtTime(t.updated_at)}</td>
+      </tr>`).join('');
+  }
+
+  async function loadLogs() {
+    const r = await fetch('/api/logs?limit=200'); const d = await r.json();
+    const today = d.logs.filter(l => l.created_at && l.created_at.startsWith(new Date().toISOString().slice(0,10))).length;
+    document.getElementById('s-logs').textContent = today;
+    const el = document.getElementById('log-list');
+    if (!d.logs.length) { el.innerHTML = '<div class="empty">No activity yet.</div>'; return; }
+    el.innerHTML = d.logs.map(l => `
+      <div class="log-entry ${l.level}">
+        <span class="ts">${fmtTime(l.created_at)}</span>
+        <span class="msg">${esc(l.message)}</span>
+      </div>`).join('');
+  }
+
+  async function loadConfig() {
+    const r = await fetch('/api/config'); const d = await r.json();
+    document.getElementById('config-content').innerHTML = `
+      <table style="width:100%">
+        ${Object.entries(d).map(([k,v]) => `<tr>
+          <td style="color:var(--muted);padding:.5rem 1rem;width:240px">${k}</td>
+          <td style="padding:.5rem 1rem;font-weight:500">${typeof v === 'boolean' ? (v ? '✅ Yes' : '❌ No') : esc(String(v))}</td>
+        </tr>`).join('')}
+      </table>
+      <p style="margin-top:1rem;color:var(--muted);font-size:.8rem">
+        ✏️ To change settings, edit your <code>.env</code> file and restart the assistant.
+      </p>`;
+  }
+
+  function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function fmtTime(s) {
+    if (!s) return '–';
+    try { return new Date(s).toLocaleString(undefined, {dateStyle:'short',timeStyle:'short'}); } catch { return s; }
+  }
+
+  // Auto-refresh every 30 seconds
+  loadMeetings(); loadThreads(); loadLogs();
+  setInterval(() => { loadMeetings(); loadThreads(); loadLogs(); }, 30000);
+</script>
+</body>
+</html>
